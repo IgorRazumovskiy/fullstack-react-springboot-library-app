@@ -1,4 +1,10 @@
+import { useAuth0 } from "@auth0/auth0-react";
+import { Link } from "react-router-dom";
+
 export const Heroes = () => {
+
+    const { isAuthenticated } = useAuth0();
+    
     return (
         <div>
             <div className='d-none d-lg-block'>
@@ -14,7 +20,12 @@ export const Heroes = () => {
                                 Wheter it is to learn a new skill or grow within one,
                                 we will be able to provide the top content for you!
                             </p>
-                            <a className='btn main-color btn-leg text-white' href='#'>Sign up</a>
+                            {isAuthenticated ? 
+                                <Link type='button' className='btn main-color btn-lg text-white'
+                                    to='search'>Explore top books </Link>
+                                :
+                                <Link className='btn main-color btn-lg text-white' to='/login'>Sign up</Link>
+                            }
                         </div>
                     </div>
                 </div>
@@ -49,7 +60,12 @@ export const Heroes = () => {
                                 Wheter it is to learn a new skill or grow within one,
                                 we will be able to provide the top content for you!
                             </p>
-                            <a className='btn main-color btn-leg text-white' href='#'>Sign up</a>
+                            {isAuthenticated ? 
+                                <Link type='button' className='btn main-color btn-lg text-white'
+                                    to='search'>Explore top books</Link>
+                                :
+                                <Link className='btn main-color btn-lg text-white' to='/login'>Sign up</Link>
+                            }
                         </div>
                     </div>
                     <div className='m-2'>
@@ -63,7 +79,6 @@ export const Heroes = () => {
                                 and our books are always going to be our
                                 top priority.
                             </p>
-                            <a className='btn main-color btn-leg text-white' href='#'>Sign up</a>
                         </div>
                     </div>
                 </div>
