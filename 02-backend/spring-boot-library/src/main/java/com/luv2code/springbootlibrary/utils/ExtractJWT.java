@@ -6,32 +6,43 @@ import java.util.Map;
 
 public class ExtractJWT {
 
+    private ExtractJWT() {
+        /* This utility class should not be instantiated */
+    }
+
     public static String payloadJWTExtraction(String token, String extraction) {
 
-        token.replaceAll("Bearer ", "");
+        token = token.replace("Bearer ", "").trim();
 
         String[] chunks = token.split("\\.");
-        Base64.Decoder decoder = Base64.getDecoder();
+        if (chunks.length < 2) {
+            return null;
+        }
+
+        Base64.Decoder decoder = Base64.getUrlDecoder();
         String payload = new String(decoder.decode(chunks[1]));
+
+        payload = payload.replace("\"\"", "\"");
 
         String[] entries = payload.split(",");
         Map<String, String> map = new HashMap<>();
-        for (String entry : entries) {
-            String[] keyValue = entry.split(":");
-            if (keyValue[0].equals(extraction)) {
-                int remove = 1;
-                if (keyValue[1].endsWith("}")) {
-                    remove = 2;
-                }
-                keyValue[1] = keyValue[1].substring(0, keyValue[1].length() - remove);
-                keyValue[1] = keyValue[1].substring(1);
 
-                map.put(keyValue[0], keyValue[1]);
+        for (String entry : entries) {
+            if (entry.contains(extraction)) {
+                String[] keyValue = entry.split(":");
+                if (keyValue.length > 1) {
+                    String value = keyValue[1].trim();
+                    value = value.replace("\"", "")
+                            .replace("}", "")
+                            .replace("{", "")
+                            .replace("[", "")
+                            .replace("]", "")
+                            .trim();
+                    map.put(extraction, value);
+                }
             }
         }
-        if (map.containsKey(extraction)) {
-            return map.get(extraction);
-        }
-        return null;
+
+        return map.getOrDefault(extraction, null);
     }
 }

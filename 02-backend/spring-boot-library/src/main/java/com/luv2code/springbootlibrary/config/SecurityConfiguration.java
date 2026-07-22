@@ -1,4 +1,4 @@
-package config;
+package com.luv2code.springbootlibrary.config;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
@@ -23,8 +23,8 @@ public class SecurityConfiguration {
                                 .requestMatchers("/api/books/secure/**",
                                         "/api/reviews/secure/**",
                                         "/api/messages/secure/**",
-                                        "/api/admin/secure/**")
-                                .authenticated().anyRequest().permitAll())
+                                        "/api/admin/secure/**").authenticated()
+                                .anyRequest().permitAll())
                 .oauth2Login(withDefaults())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(withDefaults()))
                 .cors(withDefaults());

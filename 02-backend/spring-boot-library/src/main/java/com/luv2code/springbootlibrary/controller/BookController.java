@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/books")
 public class BookController {
 
-    private static final String SUB = "\"sub\"";
+    private static final String EMAIL = "\"email\"";
     private final BookService bookService;
 
     @Autowired
@@ -27,21 +27,21 @@ public class BookController {
 
     @GetMapping("/secure/currentloans/count")
     public int currentLoansCount(@RequestHeader(value="Authorization") String token) {
-        String userEmail = ExtractJWT.payloadJWTExtraction(token, SUB);
+        String userEmail = ExtractJWT.payloadJWTExtraction(token, EMAIL);
         return bookService.currentLoansCount(userEmail);
     }
 
     @GetMapping("/secure/ischeckedout/byuser")
     public Boolean checkoutBookByUser(@RequestHeader(value="Authorization") String token,
                                       @RequestParam Long bookId) {
-        String userEmail = ExtractJWT.payloadJWTExtraction(token, SUB);
+        String userEmail = ExtractJWT.payloadJWTExtraction(token, EMAIL);
         return bookService.checkoutBookByUser(userEmail, bookId);
     }
 
     @PutMapping("/secure/checkout")
     public Book checkoutBook(@RequestHeader(value="Authorization") String token,
                              @RequestParam Long bookId) throws Exception {
-        String userEmail = ExtractJWT.payloadJWTExtraction(token, SUB);
+        String userEmail = ExtractJWT.payloadJWTExtraction(token, EMAIL);
         return bookService.checkoutBook(userEmail, bookId);
     }
 }
