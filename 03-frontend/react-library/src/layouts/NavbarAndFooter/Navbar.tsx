@@ -61,7 +61,6 @@ export const Navbar = () => {
                 <NavLink className='nav-link' to='/shelf'>Shelf</NavLink>
               </li>
             }
-            
             {isAuthenticated && roles?.includes('admin') &&
               <li className='nav-item'>
                 <NavLink className='nav-link' to='/admin'>Admin</NavLink>

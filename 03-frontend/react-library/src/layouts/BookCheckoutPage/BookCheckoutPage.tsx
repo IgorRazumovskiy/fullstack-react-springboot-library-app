@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import BookModel from "../../models/BookModels";
+import BookModel from "../../models/BookModel";
 import { SpinnerLoading } from "../Utils/SpinnerLoading";
 import { StarsReview } from "../Utils/StarsReview";
 import { CheckoutAndReviewBox } from "./CheckoutAndReviewBox";
@@ -213,7 +213,7 @@ export const BookCheckoutPage = () => {
 
     async function checkoutBook() {
         const accessToken = await getAccessTokenSilently();
-        const url = `http://localhost:8080/api/books/secure/checkout/?bookId=${book?.id}`;
+        const url = `http://localhost:8080/api/books/secure/checkout?bookId=${book?.id}`;
         const requestOptions = {
             method: 'PUT',
             headers: {
