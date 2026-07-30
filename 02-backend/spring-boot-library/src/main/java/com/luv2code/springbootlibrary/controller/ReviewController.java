@@ -3,6 +3,7 @@ package com.luv2code.springbootlibrary.controller;
 import com.luv2code.springbootlibrary.requestmodels.ReviewRequest;
 import com.luv2code.springbootlibrary.service.ReviewService;
 import com.luv2code.springbootlibrary.utils.ExtractJWT;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,6 +21,7 @@ public class ReviewController {
     private static final String EMAIL = "\"email\"";
     private ReviewService reviewService;
 
+    @Autowired
     public ReviewController(ReviewService reviewService) {
         this.reviewService = reviewService;
     }

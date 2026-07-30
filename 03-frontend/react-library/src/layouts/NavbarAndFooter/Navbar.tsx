@@ -13,7 +13,7 @@ export const Navbar = () => {
     useEffect(() => {
       const fetchRoles = async () => {
           const claims = await getIdTokenClaims();
-          const fetchedRoles = claims?.['https://luv2code-react-library.com/roles'] || [];
+          const fetchedRoles = claims?.['https://reactlibraryapp.com/roles'] || [];
           setRoles(fetchedRoles);
           setLoading(false); // Set loading to false once roles are loaded
       };
