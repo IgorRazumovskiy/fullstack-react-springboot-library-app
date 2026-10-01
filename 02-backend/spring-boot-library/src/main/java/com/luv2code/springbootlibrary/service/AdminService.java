@@ -1,19 +1,52 @@
 package com.luv2code.springbootlibrary.service;
 
 import com.luv2code.springbootlibrary.dao.BookRepository;
+import com.luv2code.springbootlibrary.dao.CheckoutRepository;
+import com.luv2code.springbootlibrary.dao.ReviewRepository;
 import com.luv2code.springbootlibrary.entity.Book;
 import com.luv2code.springbootlibrary.requestmodels.AddBookRequest;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Service
 @Transactional
 public class AdminService {
 
     private final BookRepository bookRepository;
+    private final ReviewRepository reviewRepository;
+    private final CheckoutRepository checkoutRepository;
 
-    public AdminService(BookRepository bookRepository) {
+    public AdminService(
+            BookRepository bookRepository,
+            ReviewRepository reviewRepository,
+            CheckoutRepository checkoutRepository)
+    {
         this.bookRepository = bookRepository;
+        this.reviewRepository = reviewRepository;
+        this.checkoutRepository = checkoutRepository;
+    }
+
+    public void increaseBookQuantity(Long bookId) {
+        Optional<Book> book = bookRepository.findById(bookId);
+        if (book.isEmpty()) {
+            throw new EntityNotFoundException("Book with id " + bookId + " not found");
+        }
+        book.get().setCopiesAvailable(book.get().getCopiesAvailable() + 1);
+        book.get().setCopies(book.get().getCopies() + 1);
+        bookRepository.save(book.get());
+    }
+
+    public void decreaseBookQuantity(Long bookId) {
+        Optional<Book> book = bookRepository.findById(bookId);
+        if (book.isEmpty() || book.get().getCopiesAvailable() <= 0 || book.get().getCopies() <= 0) {
+            throw new EntityNotFoundException("Book with id " + bookId + " not found or quantity locked");
+        }
+        book.get().setCopiesAvailable(book.get().getCopiesAvailable() - 1);
+        book.get().setCopies(book.get().getCopies() - 1);
+        bookRepository.save(book.get());
     }
 
     public void postBook(AddBookRequest addBookRequest) {
@@ -26,5 +59,15 @@ public class AdminService {
         book.setCategory(addBookRequest.getCategory());
         book.setImg(addBookRequest.getImg());
         bookRepository.save(book);
+    }
+
+    public void deleteBook(Long bookId) {
+        Optional<Book> book = bookRepository.findById(bookId);
+        if (book.isEmpty()) {
+            throw new EntityNotFoundException("Book with id " + bookId + " not found");
+        }
+        bookRepository.delete(book.get());
+        checkoutRepository.deleteAllByBookId(bookId);
+        reviewRepository.deleteAllByBookId(bookId);
     }
 }

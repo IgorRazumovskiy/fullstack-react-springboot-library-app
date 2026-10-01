@@ -7,6 +7,7 @@ import com.luv2code.springbootlibrary.entity.Book;
 import com.luv2code.springbootlibrary.entity.Checkout;
 import com.luv2code.springbootlibrary.entity.History;
 import com.luv2code.springbootlibrary.responsemodels.ShelfCurrentLoansResponse;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,14 +36,14 @@ public class BookService {
         this.historyRepository = historyRepository;
     }
 
-    public Book checkoutBook(String userEmail, Long bookId) throws Exception {
+    public Book checkoutBook(String userEmail, Long bookId) {
 
         Optional<Book> book = bookRepository.findById(bookId);
 
         Checkout validateCheckout = checkoutRepository.findByUserEmailAndBookId(userEmail, bookId);
 
         if (book.isEmpty() || validateCheckout != null || book.get().getCopiesAvailable() <= 0) {
-            throw new Exception("Book doesn't exist or already checked out by user");
+            throw new EntityNotFoundException("Book doesn't exist or already checked out by user");
         }
 
         book.get().setCopiesAvailable(book.get().getCopiesAvailable() - 1);
@@ -95,12 +96,12 @@ public class BookService {
         return shelfCurrentLoansResponses;
     }
 
-    public void returnBook(String userEmail, Long bookId) throws Exception {
+    public void returnBook(String userEmail, Long bookId) {
         Optional<Book> optionalBook = bookRepository.findById(bookId);
         Checkout validateCheckout = checkoutRepository.findByUserEmailAndBookId(userEmail, bookId);
 
         if (optionalBook.isEmpty() || validateCheckout == null) {
-            throw new Exception("Book doesn't exist or not checked out by user");
+            throw new EntityNotFoundException("Book doesn't exist or not checked out by user");
         }
 
         Book book = optionalBook.get();
@@ -117,7 +118,7 @@ public class BookService {
         Checkout validateCheckout = checkoutRepository.findByUserEmailAndBookId(userEmail, bookId);
 
         if (validateCheckout == null) {
-            throw new Exception("Book doesn't exist or not checked out by user");
+            throw new EntityNotFoundException("Book doesn't exist or not checked out by user");
         }
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
         Date d1 = simpleDateFormat.parse(validateCheckout.getReturnDate());

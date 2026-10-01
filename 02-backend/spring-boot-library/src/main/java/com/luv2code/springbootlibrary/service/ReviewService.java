@@ -37,7 +37,7 @@ public class ReviewService {
         reviewRepository.save(review);
     }
 
-    public boolean userReviewListed(String userEmail, Long bookId) throws Exception {
+    public boolean userReviewListed(String userEmail, Long bookId) {
         Review validateReview = reviewRepository.findByUserEmailAndBookId(userEmail, bookId);
         if (validateReview != null) {
             return true;
