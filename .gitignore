@@ -1,4 +1,9 @@
+01-starter-files/.DS_Store
 02-backend/.DS_Store
 02-backend/spring-boot-library/.DS_Store
 02-backend/spring-boot-library/src/.DS_Store
 03-frontend/.DS_Store
+03-frontend/react-library/localhost.conf
+03-frontend/react-library/.env
+03-frontend/react-library/ssl-localhost/
+.DS_Store
