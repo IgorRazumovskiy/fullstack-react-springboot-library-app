@@ -35,8 +35,6 @@ export const Navbar = () => {
     window.location.assign("/");
   };
 
-  console.log("isAuthenticated: ", isAuthenticated);
-
   return (
     <nav className='navbar navbar-expand-lg navbar-dark main-color py-3'>
       <div className='container-fluid'>
@@ -59,6 +57,11 @@ export const Navbar = () => {
             {isAuthenticated &&
               <li className='nav-item'>
                 <NavLink className='nav-link' to='/shelf'>Shelf</NavLink>
+              </li>
+            }
+            {isAuthenticated &&
+              <li className='nav-item'>
+                <NavLink className='nav-link' to='/fees'>Pay fees</NavLink>
               </li>
             }
             {isAuthenticated && roles?.includes('admin') &&
