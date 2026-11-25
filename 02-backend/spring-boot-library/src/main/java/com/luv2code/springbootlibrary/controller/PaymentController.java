@@ -5,8 +5,7 @@ import com.luv2code.springbootlibrary.service.PaymentService;
 import com.luv2code.springbootlibrary.utils.ExtractJWT;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,7 +23,6 @@ public class PaymentController {
     private static final String EMAIL = "\"email\"";
     private final PaymentService paymentService;
 
-    @Autowired
     public PaymentController(PaymentService paymentService) {
         this.paymentService = paymentService;
     }
@@ -32,16 +30,14 @@ public class PaymentController {
     @PostMapping("/payment-intent")
     public ResponseEntity<String> createPaymentIntent(@RequestBody PaymentInfoRequest paymentInfoRequest)
             throws StripeException {
-
         PaymentIntent paymentIntent = paymentService.createPaymentIntent(paymentInfoRequest);
-        String paymentStr = paymentIntent.toJson();
-
-        return new ResponseEntity<>(paymentStr, HttpStatus.OK);
+        return ResponseEntity.ok(paymentIntent.toJson());
     }
 
     @PutMapping("/payment-complete")
-    public ResponseEntity<String> stripePaymentComplete(@RequestHeader(value="Authorization") String token) {
+    public ResponseEntity<String> stripePaymentComplete(@RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
         String userEmail = ExtractJWT.payloadJWTExtraction(token, EMAIL);
-        return paymentService.stripePayment(userEmail);
+        paymentService.stripePayment(userEmail);
+        return ResponseEntity.ok().build();
     }
 }

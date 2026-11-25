@@ -7,3 +7,4 @@
 03-frontend/react-library/.env
 03-frontend/react-library/ssl-localhost/
 .DS_Store
+02-backend/spring-boot-library/src/main/resources/backend-cert.pem

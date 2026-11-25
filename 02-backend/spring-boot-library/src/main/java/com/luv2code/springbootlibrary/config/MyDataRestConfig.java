@@ -12,27 +12,26 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 @Configuration
 public class MyDataRestConfig implements RepositoryRestConfigurer {
 
-    private String theAllowedOrigins = "https://localhost:3000";
+    private static final String ALLOWED_ORIGINS = "https://localhost:3000";
 
     @Override
     public void configureRepositoryRestConfiguration(RepositoryRestConfiguration config, CorsRegistry cors) {
-        HttpMethod[] theUnsupportedActions = {HttpMethod.POST, HttpMethod.PATCH, HttpMethod.DELETE, HttpMethod.PUT};
-        config.exposeIdsFor(Book.class);
-        config.exposeIdsFor(Review.class);
-        config.exposeIdsFor(Message.class);
+        HttpMethod[] unsupportedActions = {HttpMethod.POST, HttpMethod.PATCH, HttpMethod.DELETE, HttpMethod.PUT};
+        config.exposeIdsFor(Book.class, Review.class, Message.class);
 
-        disableHttpMethods(Book.class, config, theUnsupportedActions);
-        disableHttpMethods(Review.class, config, theUnsupportedActions);
-        disableHttpMethods(Message.class, config, theUnsupportedActions);
+        disableHttpMethods(Book.class, config, unsupportedActions);
+        disableHttpMethods(Review.class, config, unsupportedActions);
+        disableHttpMethods(Message.class, config, unsupportedActions);
 
         /* Configure CORS Mapping */
-        cors.addMapping(config.getBasePath() + "/**").allowedOrigins(theAllowedOrigins);
+        cors.addMapping(config.getBasePath() + "/**").allowedOrigins(ALLOWED_ORIGINS);
     }
 
-    private void disableHttpMethods(Class theClass, RepositoryRestConfiguration config, HttpMethod[] theUnsupportedActions) {
+    private static void disableHttpMethods(Class<?> domainType, RepositoryRestConfiguration config,
+                                           HttpMethod[] unsupportedActions) {
         config.getExposureConfiguration()
-                .forDomainType(theClass)
-                .withItemExposure(((metdata, httpMethods) -> httpMethods.disable(theUnsupportedActions)))
-                .withCollectionExposure(((metdata, httpMethods) -> httpMethods.disable(theUnsupportedActions)));
+                .forDomainType(domainType)
+                .withItemExposure((metadata, httpMethods) -> httpMethods.disable(unsupportedActions))
+                .withCollectionExposure((metadata, httpMethods) -> httpMethods.disable(unsupportedActions));
     }
 }

@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.accept.ContentNegotiationStrategy;
 import org.springframework.web.accept.HeaderContentNegotiationStrategy;
@@ -25,12 +26,16 @@ public class SecurityConfiguration {
                                         "/api/messages/secure/**",
                                         "/api/admin/secure/**").authenticated()
                                 .anyRequest().permitAll())
-                .oauth2Login(withDefaults())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(withDefaults()))
                 .cors(withDefaults());
 
-        // Disable Cross Site Request Forgery
-        http.csrf(AbstractHttpConfigurer::disable);
+        // Stateless API: no HTTP session and no session cookie is ever created.
+        http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+        // CSRF protection is disabled on purpose: authentication is done exclusively with a Bearer JWT
+        // in the Authorization header, which browsers never attach automatically to cross-site requests.
+        // Without cookie/session based authentication there is no CSRF attack surface.
+        http.csrf(AbstractHttpConfigurer::disable); // NOSONAR - stateless Bearer-token API, see comment above
 
         // Add content negotiation strategy
         http.setSharedObject(ContentNegotiationStrategy.class, new HeaderContentNegotiationStrategy());

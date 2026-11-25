@@ -10,22 +10,26 @@ import com.luv2code.springbootlibrary.entity.History;
 import com.luv2code.springbootlibrary.entity.Payment;
 import com.luv2code.springbootlibrary.responsemodels.ShelfCurrentLoansResponse;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.text.SimpleDateFormat;
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
 public class BookService {
 
-    private static final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+    private static final int LOAN_PERIOD_DAYS = 7;
+    private static final String NOT_CHECKED_OUT = "Book doesn't exist or not checked out by user";
 
     private final BookRepository bookRepository;
 
@@ -35,119 +39,98 @@ public class BookService {
 
     private final PaymentRepository paymentRepository;
 
+    private final Clock clock;
+
     public BookService(BookRepository bookRepository, CheckoutRepository checkoutRepository,
-                       HistoryRepository historyRepository, PaymentRepository paymentRepository) {
+                       HistoryRepository historyRepository, PaymentRepository paymentRepository,
+                       Clock clock) {
         this.bookRepository = bookRepository;
         this.checkoutRepository = checkoutRepository;
         this.historyRepository = historyRepository;
         this.paymentRepository = paymentRepository;
+        this.clock = clock;
     }
 
-    public Book checkoutBook(String userEmail, Long bookId) throws Exception {
-
-        Optional<Book> book = bookRepository.findById(bookId);
-
+    public Book checkoutBook(String userEmail, Long bookId) {
+        Book book = bookRepository.findById(bookId).orElse(null);
         Checkout validateCheckout = checkoutRepository.findByUserEmailAndBookId(userEmail, bookId);
 
-        if (book.isEmpty() || validateCheckout != null || book.get().getCopiesAvailable() <= 0) {
+        if (book == null || validateCheckout != null || book.getCopiesAvailable() <= 0) {
             throw new EntityNotFoundException("Book doesn't exist or already checked out by user");
         }
 
-        List<Checkout> currentBooksCheckout = checkoutRepository.findBooksByUserEmail(userEmail);
-
-        boolean bookNeedsReturn = false;
-
-        for (Checkout checkout : currentBooksCheckout) {
-            Date d1 = simpleDateFormat.parse(checkout.getReturnDate());
-            Date d2 = simpleDateFormat.parse(LocalDate.now().toString());
-            TimeUnit time = TimeUnit.DAYS;
-            long differenceInTime = time.convert(d1.getTime() - d2.getTime(), TimeUnit.MILLISECONDS);
-            if (differenceInTime < 0) {
-                bookNeedsReturn = true;
-                break;
-            }
-        }
+        boolean bookNeedsReturn = checkoutRepository.findBooksByUserEmail(userEmail).stream()
+                .anyMatch(checkout -> daysUntilReturn(checkout) < 0);
 
         Payment userPayment = paymentRepository.findByUserEmail(userEmail);
-        if ((userPayment != null && userPayment.getAmount() > 0) || (userPayment != null && bookNeedsReturn)) {
-            throw new Exception("Outstanding fees");
+        if (userPayment != null && (userPayment.getAmount() > 0 || bookNeedsReturn)) {
+            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "Outstanding fees");
         }
         if (userPayment == null) {
             Payment payment = new Payment();
-            payment.setAmount(00.00);
+            payment.setAmount(0.0);
             payment.setUserEmail(userEmail);
             paymentRepository.save(payment);
         }
 
-        book.get().setCopiesAvailable(book.get().getCopiesAvailable() - 1);
-        bookRepository.save(book.get());
+        book.setCopiesAvailable(book.getCopiesAvailable() - 1);
+        bookRepository.save(book);
 
+        LocalDate today = LocalDate.now(clock);
         Checkout checkout = new Checkout(
                 userEmail,
-                LocalDate.now().toString(),
-                LocalDate.now().plusDays(7).toString(),
-                book.get().getId());
+                today.toString(),
+                today.plusDays(LOAN_PERIOD_DAYS).toString(),
+                book.getId());
         checkoutRepository.save(checkout);
 
-        return book.get();
+        return book;
     }
 
-    public Boolean checkoutBookByUser(String userEmail, Long bookId) {
-        Checkout validateCheckout = checkoutRepository.findByUserEmailAndBookId(userEmail, bookId);
-        return validateCheckout != null;
+    public boolean checkoutBookByUser(String userEmail, Long bookId) {
+        return checkoutRepository.findByUserEmailAndBookId(userEmail, bookId) != null;
     }
 
     public int currentLoansCount(String userEmail) {
         return checkoutRepository.findBooksByUserEmail(userEmail).size();
     }
 
-    public List<ShelfCurrentLoansResponse> currentLoans(String userEmail) throws Exception {
+    public List<ShelfCurrentLoansResponse> currentLoans(String userEmail) {
+        List<Checkout> checkoutList = checkoutRepository.findBooksByUserEmail(userEmail);
+        Map<Long, Checkout> checkoutsByBookId = checkoutList.stream()
+                .collect(Collectors.toMap(Checkout::getBookId, Function.identity(), (first, second) -> first));
+
+        List<Book> books = bookRepository.findBooksByBookIds(new ArrayList<>(checkoutsByBookId.keySet()));
+
         List<ShelfCurrentLoansResponse> shelfCurrentLoansResponses = new ArrayList<>();
-        List<Checkout>  checkoutList = checkoutRepository.findBooksByUserEmail(userEmail);
-        List<Long> bookIdList = new ArrayList<>();
-
-        for (Checkout checkout : checkoutList) {
-            bookIdList.add(checkout.getBookId());
-        }
-        List<Book> books = bookRepository.findBooksByBookIds(bookIdList);
-
-        for  (Book book : books) {
-            Optional<Checkout> checkout = checkoutList.stream()
-                    .filter(c -> c.getBookId().equals(book.getId()))
-                    .findFirst();
-            if (checkout.isPresent()) {
-                Date d1 = simpleDateFormat.parse(checkout.get().getReturnDate());
-                Date d2 = simpleDateFormat.parse(LocalDate.now().toString());
-
-                TimeUnit time = TimeUnit.DAYS;
-                long differenceInTime = time.convert(d1.getTime() - d2.getTime(), TimeUnit.MILLISECONDS);
-
-                shelfCurrentLoansResponses.add(new ShelfCurrentLoansResponse(book, (int) differenceInTime));
+        for (Book book : books) {
+            Checkout checkout = checkoutsByBookId.get(book.getId());
+            if (checkout != null) {
+                shelfCurrentLoansResponses.add(
+                        new ShelfCurrentLoansResponse(book, (int) daysUntilReturn(checkout)));
             }
         }
         return shelfCurrentLoansResponses;
     }
 
-    public void returnBook(String userEmail, Long bookId) throws Exception {
-        Optional<Book> optionalBook = bookRepository.findById(bookId);
+    public void returnBook(String userEmail, Long bookId) {
+        Book book = bookRepository.findById(bookId).orElse(null);
         Checkout validateCheckout = checkoutRepository.findByUserEmailAndBookId(userEmail, bookId);
 
-        if (optionalBook.isEmpty() || validateCheckout == null) {
-            throw new EntityNotFoundException("Book doesn't exist or not checked out by user");
+        if (book == null || validateCheckout == null) {
+            throw new EntityNotFoundException(NOT_CHECKED_OUT);
         }
 
-        Book book = optionalBook.get();
         book.setCopiesAvailable(book.getCopiesAvailable() + 1);
         bookRepository.save(book);
 
-        Date d1 = simpleDateFormat.parse(validateCheckout.getReturnDate());
-        Date d2 = simpleDateFormat.parse(LocalDate.now().toString());
-
-        TimeUnit time = TimeUnit.DAYS;
-        long differenceInTime = time.convert(d1.getTime() - d2.getTime(), TimeUnit.MILLISECONDS);
-        if (differenceInTime < 0) {
+        long daysLeft = daysUntilReturn(validateCheckout);
+        if (daysLeft < 0) {
             Payment payment = paymentRepository.findByUserEmail(userEmail);
-            payment.setAmount(payment.getAmount() + (differenceInTime * -1));
+            if (payment == null) {
+                throw new EntityNotFoundException("Payment information is missing");
+            }
+            payment.setAmount(payment.getAmount() - daysLeft);
             paymentRepository.save(payment);
         }
 
@@ -158,17 +141,19 @@ public class BookService {
         historyRepository.save(history);
     }
 
-    public void renewLoan(String userEmail, Long bookId) throws Exception {
+    public void renewLoan(String userEmail, Long bookId) {
         Checkout validateCheckout = checkoutRepository.findByUserEmailAndBookId(userEmail, bookId);
 
         if (validateCheckout == null) {
-            throw new EntityNotFoundException("Book doesn't exist or not checked out by user");
+            throw new EntityNotFoundException(NOT_CHECKED_OUT);
         }
-        Date d1 = simpleDateFormat.parse(validateCheckout.getReturnDate());
-        Date d2 = simpleDateFormat.parse(LocalDate.now().toString());
-        if (d1.compareTo(d2) > 0 || d1.compareTo(d2) == 0) {
-            validateCheckout.setReturnDate(LocalDate.now().plusDays(7).toString());
+        if (daysUntilReturn(validateCheckout) >= 0) {
+            validateCheckout.setReturnDate(LocalDate.now(clock).plusDays(LOAN_PERIOD_DAYS).toString());
             checkoutRepository.save(validateCheckout);
         }
+    }
+
+    private long daysUntilReturn(Checkout checkout) {
+        return ChronoUnit.DAYS.between(LocalDate.now(clock), LocalDate.parse(checkout.getReturnDate()));
     }
 }

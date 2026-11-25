@@ -2,8 +2,6 @@ package com.luv2code.springbootlibrary.requestmodels;
 
 import lombok.Data;
 
-import java.util.Optional;
-
 @Data
 public class ReviewRequest {
 
@@ -11,5 +9,5 @@ public class ReviewRequest {
 
     private Long bookId;
 
-    private Optional<String> reviewDescription;
+    private String reviewDescription;
 }

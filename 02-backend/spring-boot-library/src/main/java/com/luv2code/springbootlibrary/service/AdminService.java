@@ -9,8 +9,6 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
-
 @Service
 @Transactional
 public class AdminService {
@@ -22,31 +20,27 @@ public class AdminService {
     public AdminService(
             BookRepository bookRepository,
             ReviewRepository reviewRepository,
-            CheckoutRepository checkoutRepository)
-    {
+            CheckoutRepository checkoutRepository) {
         this.bookRepository = bookRepository;
         this.reviewRepository = reviewRepository;
         this.checkoutRepository = checkoutRepository;
     }
 
     public void increaseBookQuantity(Long bookId) {
-        Optional<Book> book = bookRepository.findById(bookId);
-        if (book.isEmpty()) {
-            throw new EntityNotFoundException("Book with id " + bookId + " not found");
-        }
-        book.get().setCopiesAvailable(book.get().getCopiesAvailable() + 1);
-        book.get().setCopies(book.get().getCopies() + 1);
-        bookRepository.save(book.get());
+        Book book = findBook(bookId);
+        book.setCopiesAvailable(book.getCopiesAvailable() + 1);
+        book.setCopies(book.getCopies() + 1);
+        bookRepository.save(book);
     }
 
     public void decreaseBookQuantity(Long bookId) {
-        Optional<Book> book = bookRepository.findById(bookId);
-        if (book.isEmpty() || book.get().getCopiesAvailable() <= 0 || book.get().getCopies() <= 0) {
-            throw new EntityNotFoundException("Book with id " + bookId + " not found or quantity locked");
-        }
-        book.get().setCopiesAvailable(book.get().getCopiesAvailable() - 1);
-        book.get().setCopies(book.get().getCopies() - 1);
-        bookRepository.save(book.get());
+        Book book = bookRepository.findById(bookId)
+                .filter(b -> b.getCopiesAvailable() > 0 && b.getCopies() > 0)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Book with id " + bookId + " not found or quantity locked"));
+        book.setCopiesAvailable(book.getCopiesAvailable() - 1);
+        book.setCopies(book.getCopies() - 1);
+        bookRepository.save(book);
     }
 
     public void postBook(AddBookRequest addBookRequest) {
@@ -62,12 +56,14 @@ public class AdminService {
     }
 
     public void deleteBook(Long bookId) {
-        Optional<Book> book = bookRepository.findById(bookId);
-        if (book.isEmpty()) {
-            throw new EntityNotFoundException("Book with id " + bookId + " not found");
-        }
-        bookRepository.delete(book.get());
+        Book book = findBook(bookId);
+        bookRepository.delete(book);
         checkoutRepository.deleteAllByBookId(bookId);
         reviewRepository.deleteAllByBookId(bookId);
+    }
+
+    private Book findBook(Long bookId) {
+        return bookRepository.findById(bookId)
+                .orElseThrow(() -> new EntityNotFoundException("Book with id " + bookId + " not found"));
     }
 }
